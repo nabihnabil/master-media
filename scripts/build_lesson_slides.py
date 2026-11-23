@@ -47,6 +47,7 @@ add('الدفاع عن المعالجة',q('لماذا اخترتم هذه ال�
 add('ما الذي يجعل العمل جيدًا؟',table(['المعيار','النقطة /20'],[['دقة التصنيف وفهم التداخل','4'],['الأدلة والإسناد','5'],['البدائل وحدود المعرفة','4'],['ملاءمة القرار للمؤسسة والجمهور','4'],['وضوح العمل وتوزيع الأدوار والإفصاح','3']]),refs=['تكليف تحليلي: مذكرة قرار تحريرية'],guide='اشرح معيارًا بمثال. الإفصاح يشمل الاستعانة بالذكاء الاصطناعي إن استُخدم؛ المسؤولية عن المراجعة على الفريق.')
 add('قرار واحد يمكن الدفاع عنه',q('ما القرار الذي ستغيّره في إنتاج فيديو بعد هذه الحصة؟')+'<p class="lead">اذكر القرار، ودليله، وأثره في فهم الجمهور.</p>',guide='تقييم ختامي فردي في دقيقتين. الإجابة لا تقتصر على اسم أداة؛ ينبغي أن تربط مفهومًا بقرار مهني.')
 for slide in slides:
+ slide['body']=re.sub(r'(\d{4}[–-]\d{4})',r'<bdi dir="ltr">\1</bdi>',slide['body'])
  slide['wordCount']=len(BeautifulSoup(slide['body'],'html.parser').get_text(' ',strip=True).split())
 (root/'lessons/session-01-slides.json').write_text(json.dumps(slides,ensure_ascii=False,indent=2))
 p=root/'lessons/session-01-slides.html';s=p.read_text();s=re.sub(r'(<script id="deck-data" type="application/json">).*?(</script>)',lambda m:m[1]+json.dumps(slides,ensure_ascii=False).replace('</','<\\/')+m[2],s,flags=re.S)
