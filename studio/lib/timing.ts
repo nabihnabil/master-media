@@ -1,0 +1,5 @@
+export type Timing={duration:number,running:boolean,anchor:number,elapsed:number,slides:Record<string,number>};
+export function readTiming(raw:string):Timing {try{const t=JSON.parse(raw);return {duration:t.duration||60,running:!!t.running,anchor:t.anchor||0,elapsed:t.elapsed||0,slides:t.slides||{}}}catch{return {duration:60,running:false,anchor:0,elapsed:0,slides:{}}}}
+export function settleTiming(t:Timing,slideId:string,now:number):Timing {const delta=t.running?Math.max(0,now-t.anchor):0;return {...t,anchor:now,elapsed:t.elapsed+delta,slides:{...t.slides,[slideId]:(t.slides[slideId]||0)+delta}}}
+export function timeValues(t:Timing,slideId:string,now:number){const current=settleTiming(t,slideId,now);return {elapsed:current.elapsed,slide:current.slides[slideId]||0,remaining:t.duration*60000-current.elapsed,slides:current.slides}}
+export function formatTime(ms:number){const seconds=Math.floor(Math.abs(ms)/1000);return `${Math.floor(seconds/60).toString().padStart(2,'0')}:${(seconds%60).toString().padStart(2,'0')}`}

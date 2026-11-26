@@ -1,0 +1,11 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {formatTime,timeValues} from '../lib/timing';
+export default function PresenterClock({room,control}:{room:any,control:(command:string,value?:any)=>Promise<void>}){
+ const [now,setNow]=useState(Date.now()),[minutes,setMinutes]=useState(String(room.timing.duration)),[busy,setBusy]=useState(false);
+ useEffect(()=>{setMinutes(String(room.timing.duration))},[room.timing.duration]);
+ useEffect(()=>{const start=Date.now();const update=()=>setNow(room.serverNow+Date.now()-start);update();const timer=setInterval(update,500);return()=>clearInterval(timer)},[room.serverNow]);
+ const v=timeValues(room.timing,room.slide.id,now);
+ async function act(command:string,value?:any){setBusy(true);try{await control(command,value)}finally{setBusy(false)}}
+ return <section className="presenter-clock" aria-label="توقيت الحصة"><div className="clock-readings"><div><span>وقت هذه الشريحة</span><strong dir="ltr">{formatTime(v.slide)}</strong></div><div><span>الوقت المستغرق</span><strong dir="ltr">{formatTime(v.elapsed)}</strong></div><div className={v.remaining<0?'over-time':''}><span>{v.remaining<0?'تجاوز المدة':'الوقت المتبقي'}</span><strong dir="ltr">{formatTime(v.remaining>=0?Math.ceil(v.remaining/1000)*1000:v.remaining)}</strong></div></div><div className="clock-controls"><label>مدة الحصة بالدقائق<input aria-label="مدة الحصة بالدقائق" type="number" min="1" max="480" value={minutes} onChange={e=>setMinutes(e.target.value)}/></label><button disabled={busy||!Number.isInteger(+minutes)||+minutes<1||+minutes>480} onClick={()=>act('timerDuration',+minutes)}>اعتماد المدة</button><button className="primary" disabled={busy||!room.active} onClick={()=>act('timerRunning',!room.timing.running)}>{room.timing.running?'إيقاف مؤقت':v.elapsed?'استئناف التوقيت':'بدء التوقيت'}</button><button disabled={busy} onClick={()=>{if(confirm('تصفير أوقات هذه الحصة والشرائح؟'))act('timerReset')}}>تصفير</button></div><details><summary>الوقت المستغرق حسب الشرائح</summary><p className="muted">وقت فعلي تراكمي، يتوقف أثناء الاستراحة ويستمر عند العودة إلى الشريحة.</p>{room.slides.map((s:any,i:number)=><div className="slide-time" key={s.id}><span>{i+1} · {s.title}</span><b dir="ltr">{formatTime(v.slides[s.id]||0)}</b></div>)}</details></section>
+}

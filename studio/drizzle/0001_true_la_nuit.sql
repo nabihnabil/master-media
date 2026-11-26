@@ -1,0 +1,1 @@
+ALTER TABLE `rooms` ADD `timing` text DEFAULT '{}' NOT NULL;
