@@ -176,7 +176,7 @@ source=source.replace('<title>عرض الحصة المشتركة | صناعة ا
 css='''.number-comparison{display:grid;grid-template-columns:1fr 1fr;gap:35px}.number-comparison>div{border-right:3px solid #b48a47;padding-right:24px}.big-number{font-size:clamp(38px,5vw,68px)!important;font-weight:700;color:#87632e}.number-comparison p{font-size:24px}.learning-cycle{display:flex;gap:35px;justify-content:space-between;border-top:2px solid #b48a47;padding-top:24px}.learning-cycle p{flex:1}.memory-number{font-size:38px!important;color:#87632e}.teacher-side .tip{font-size:16px}#teacherText h3{color:#365d68;border-bottom:1px solid #d6dedb;padding-bottom:8px}#teacherText p{font-size:23px;line-height:1.95}@media(max-width:750px){.number-comparison{grid-template-columns:1fr}.learning-cycle{display:block}.number-comparison p{font-size:20px}}'''
 source=re.sub(r'(<h2>التحكم بالفيديو على شاشة الطلبة</h2>.*?)(<h2>قراءة القسم</h2>)',r'<div hidden>\1</div>\2',source,flags=re.S)
 source=source.replace('</style>',css+'</style>',1)
-(root/'lessons/session-00-slides.html').write_text(source)
+(root/'lessons/session-00-slides-original.html').write_text(source)
 # Editorial script is editable and intentionally separate from student text.
 md=['# الحصة المشتركة: كيف نستفيد من حصصنا؟','نسخة إعداد 26 نوفمبر 2026. تفاصيل السيرة مأخوذة من رواية الدكتور نبيل نبيه. سنة بداية القصة 2003 وفق تأكيده. تهجئة اسم البرنامج لم تثبت بعد.']
 for i,s in enumerate(slides,1):
