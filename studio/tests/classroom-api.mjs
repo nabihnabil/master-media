@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+// Local synthetic fixtures only; never point this test at production.
+const base='http://127.0.0.1:8788';const admin={'oai-authenticated-user-email':'jetnabih@gmail.com'};
+async function get(path,headers={}){const r=await fetch(base+path,{headers});return {status:r.status,data:await r.json()}}
+async function post(path,data,headers=admin){const r=await fetch(base+path,{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify(data)});return {status:r.status,data:await r.json()}}
+assert.equal((await get('/api/classroom?action=students')).status,403);
+let s=await post('/api/classroom',{action:'saveStudent',name:'اختبار محلي فقط',code:'Local-test-123',profile:{email:'test@example.invalid',notes:'private fixture'}});assert.equal(s.status,200,JSON.stringify(s));const student=s.data.id;
+let decks=await get('/api/studio?action=decks',admin);assert.equal(decks.status,200);const deck=JSON.parse(decks.data[0].data);let created=await post('/api/studio',{action:'createRoom',deck:deck.id});const room=created.data.id;
+assert.equal((await post('/api/studio',{action:'join',room,name:'anonymous'},{})).status,401);
+assert.equal((await post('/api/studio',{action:'join',room,student,code:'wrong'},{})).status,401);
+let joined=await post('/api/studio',{action:'join',room,student,code:'Local-test-123'},{});assert.equal(joined.status,200,JSON.stringify(joined));let token=joined.data.token,person=joined.data.id;let auth={Authorization:'Bearer '+token};
+let state=await get('/api/studio?action=room&room='+room,auth);assert.equal(state.status,200);assert.equal(state.data.leaderboard,null);assert.equal(state.data.timing,undefined);assert.equal(state.data.slide.notes,undefined);
+const roster=await get('/api/classroom?action=roster&room='+room);assert.equal(roster.data.find(x=>x.id===student).profile,undefined);assert.equal(roster.data.find(x=>x.id===student).code_hash,undefined);
+await post('/api/classroom',{action:'heartbeat',room,visible:true},auth);await post('/api/studio',{action:'hand',room,raised:true},auth);
+let quizIndex=deck.slides.findIndex(s=>s.activity?.kind==='quiz');assert.ok(quizIndex>=0);const quiz=deck.slides[quizIndex];
+await post('/api/studio',{action:'roomControl',room,command:'position',value:quizIndex});await post('/api/studio',{action:'roomControl',room,command:'answers_open',value:true});await post('/api/studio',{action:'answer',room,slide:quiz.id,value:String(quiz.activity.correct)},auth);
+assert.equal((await post('/api/classroom',{action:'weights',room,weights:{[quiz.id]:11}})).status,400);
+assert.equal((await post('/api/classroom',{action:'weights',room,weights:{[quiz.id]:10}})).status,200);
+let report=await get('/api/classroom?action=report&room='+room,admin);assert.equal(report.data.entries[0].score,10);assert.equal(report.data.entries[0].participation,100);assert.ok(report.data.entries[0].visits.length);
+assert.equal((await post('/api/classroom',{action:'grade',room,person,slide:quiz.id,points:4},auth)).status,403);
+await post('/api/classroom',{action:'grade',room,person,slide:quiz.id,points:7});await post('/api/classroom',{action:'announce',room,value:true});state=await get('/api/studio?action=room&room='+room,auth);assert.equal(state.data.leaderboard[0].score,7);assert.equal(state.data.leaderboard[0].profile,undefined);assert.equal(state.data.answersOpen,false);
+const file=await fetch(base+'/api/student-files/'+student,{method:'POST',headers:{...admin,'Content-Type':'application/pdf','X-File-Name':'test.pdf'},body:'%PDF-1.4\nlocal test fixture'});assert.equal(file.status,200);const fileId=(await file.json()).id;assert.equal((await fetch(base+'/api/student-files/'+fileId)).status,403);assert.equal((await fetch(base+'/api/student-files/'+fileId,{headers:admin})).status,200);
+let rejoin=await post('/api/studio',{action:'join',room,student,code:'Local-test-123'},{});assert.equal(rejoin.data.id,person);assert.equal((await get('/api/studio?action=room&room='+room,auth)).status,401);auth={Authorization:'Bearer '+rejoin.data.token};await post('/api/classroom',{action:'saveStudent',id:student,name:'اختبار محلي فقط',code:'Reset-test-456',profile:{}});assert.equal((await get('/api/studio?action=room&room='+room,auth)).status,401);assert.equal((await post('/api/studio',{action:'join',room,student,code:'Local-test-123'},{})).status,401);assert.equal((await post('/api/studio',{action:'join',room,student,code:'Reset-test-456'},{})).status,200);
+console.log('PASS local API: protected roster data/files, code login and reset, unique attendance, visits, weights /10, quiz scoring, manual grading, announcement gate.');
