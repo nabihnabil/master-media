@@ -3,7 +3,7 @@ const base='http://127.0.0.1:8789',admin={'oai-authenticated-user-email':'jetnab
 async function call(path,body,headers=admin){const r=await fetch(base+path,{method:body?'POST':'GET',headers:{...headers,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()}}
 const students=[];
 for(let i=0;i<2;i++){const s=await call('/api/classroom',{action:'saveStudent',name:'طالب اختبار التعارف',year:2,code:'Local-test-2026',profile:{}});assert.equal(s.status,200);students.push(s.data.id)}
-const deck={id:crypto.randomUUID(),year:2,title:'اختبار ملف الطالب محليًا',slides:[{id:crypto.randomUUID(),title:'لنتعرف إلى بعضنا',background:'#ffffff',backgroundImage:'',notes:'',nodes:[],activity:{kind:'text',question:'عرّفنا بنفسك',options:[],fields:[{id:'city',label:'المدينة'},{id:'goal',label:'الهدف'}]}}]};
+const deck={id:crypto.randomUUID(),year:2,title:'اختبار ملف الطالب محليًا',slides:[{id:crypto.randomUUID(),title:'عرّفنا بنفسك',background:'#ffffff',backgroundImage:'',notes:'',nodes:[],activity:{kind:'text',saveToProfile:true,question:'عرّفنا بنفسك',options:[],fields:[{id:'city',label:'المدينة'},{id:'goal',label:'الهدف'}]}}]};
 assert.equal((await call('/api/studio',{action:'save',deck})).status,200);
 const room=(await call('/api/studio',{action:'createRoom',deck:deck.id})).data.id;
 await call('/api/studio',{action:'roomControl',room,command:'answers_open',value:true});
