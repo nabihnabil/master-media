@@ -6,10 +6,10 @@ export async function expectedRoster(r:any){const saved=JSON.parse(r.expected||'
 export async function sessionReport(r:any){
  const d=JSON.parse(r.data),expected=await expectedRoster(r),people=await many('SELECT id,student,name,joined FROM people WHERE room=? ORDER BY joined',r.id);
  const [answers,events,grades,visits]=await Promise.all([many('SELECT * FROM answers WHERE room=?',r.id),many('SELECT * FROM answer_events WHERE room=? ORDER BY created,id',r.id),many('SELECT * FROM grades WHERE room=?',r.id),many('SELECT * FROM visits WHERE room=?',r.id)]);
- const config=scoring(r.scoring),start=r.started||r.created;
+ const config=scoring(r.scoring),start=config.mode==='participation'?r.created:r.started||r.created;
  const all=[...expected];for(const p of people)if(!all.some(s=>s.id===(p.student||p.id)))all.push({id:p.student||p.id,name:p.name});
- const entries=all.map(s=>reportEntry(s,people.find(p=>(p.student||p.id)===s.id),d.slides,answers,events,grades,visits,config,start));
- return {room:r.id,title:d.title,course:courseFor(d),started:start,startSource:r.started?'بدء التوقيت':'وقت فتح الحصة (لم يُشغّل المؤقت)',ended:r.ended||null,active:!!r.active,expected:expected.length,attended:entries.filter(e=>e.joined!==null).length,absent:entries.filter(e=>e.joined===null).length,late:entries.filter(e=>e.late).length,allocated:Object.values(config.weights).reduce((a:number,b:any)=>a+Number(b||0),0),entries};
+ const entries=all.map(s=>reportEntry(s,people.find(p=>(p.student||p.id)===s.id),d.slides,answers,events,grades,visits,config,start,r.ended));
+ return {room:r.id,title:d.title,course:courseFor(d),started:start,scoringMode:config.mode,startSource:config.mode==='participation'?'وقت فتح الحصة':r.started?'بدء التوقيت':'وقت فتح الحصة (لم يُشغّل المؤقت)',ended:r.ended||null,active:!!r.active,expected:expected.length,attended:entries.filter(e=>e.joined!==null).length,absent:entries.filter(e=>e.joined===null).length,late:entries.filter(e=>e.late).length,allocated:Object.values(config.weights).reduce((a:number,b:any)=>a+Number(b||0),0),entries};
 }
 export async function reportLogin(b:any){
  const r=await one('SELECT * FROM rooms WHERE id=?',String(b.room||''));if(!r||r.active)reject('يصبح التقرير متاحًا بعد إنهاء الحصة.',403);

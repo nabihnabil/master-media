@@ -14,7 +14,7 @@ export async function GET(req:Request){try{
  }
  const result=await sessionReport(r);const selected=teacher?u.searchParams.get('student'):student;
  if(selected)result.entries=result.entries.filter(e=>e.id===selected);if(!result.entries.length&&selected)reject('التقرير غير موجود.',404);
- if(!teacher){for(const e of result.entries)for(const detail of e.details)delete (detail as any).feedback;return json({room:result.room,title:result.title,course:result.course,started:result.started,startSource:result.startSource,ended:result.ended,allocated:result.allocated,teacher:false,entries:result.entries});}
+ if(!teacher){for(const e of result.entries)for(const detail of e.details)delete (detail as any).feedback;return json({room:result.room,title:result.title,course:result.course,started:result.started,startSource:result.startSource,ended:result.ended,allocated:result.allocated,scoringMode:result.scoringMode,teacher:false,entries:result.entries});}
  return json({...result,teacher:true});
  }catch(e:any){return json({error:e.message},e.status||500)}}
 export async function POST(req:Request){try{if(req.headers.get('origin')&&req.headers.get('origin')!==new URL(req.url).origin)reject('مصدر غير مسموح.',403);if(Number(req.headers.get('content-length'))>4000)reject('طلب كبير.',413);return json(await reportLogin(await req.json()));}catch(e:any){return json({error:e.message},e.status||500)}}
