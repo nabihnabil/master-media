@@ -1,0 +1,1 @@
+ALTER TABLE `students` ADD `year` integer DEFAULT 0 NOT NULL;
