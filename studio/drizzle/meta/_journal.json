@@ -29,6 +29,13 @@
       "when": 1795848715275,
       "tag": "0003_equal_stick",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795849734284,
+      "tag": "0004_fixed_winter_soldier",
+      "breakpoints": true
     }
   ]
 }

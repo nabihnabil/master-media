@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import ts from 'typescript';
+const logic=ts.transpileModule(await fs.readFile('lib/report-logic.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext}}).outputText;
+const {attendanceStatus}=await import('data:text/javascript;base64,'+Buffer.from(logic).toString('base64'));
+assert.equal(attendanceStatus(null,100).status,'غائب');assert.equal(attendanceStatus(1800100,100).late,false);assert.equal(attendanceStatus(1800101,100).late,true);
+const base='http://127.0.0.1:8788',admin={'oai-authenticated-user-email':'jetnabih@gmail.com'};
+async function api(path,body,headers=admin){const r=await fetch(base+path,{method:body?'POST':'GET',headers:{...headers,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()}}
+async function student(name){const s=await api('/api/classroom',{action:'saveStudent',name,year:1,code:'Report-test-2026',profile:{notes:'private student profile'}});assert.equal(s.status,200);return s.data.id}
+const present=await student('طالب التقرير المحلي'),absent=await student('طالب غائب محلي');
+const deck={id:crypto.randomUUID(),title:'اختبار تقرير محلي',year:1,slides:[{id:'quiz',title:'اختيار المدينة',background:'#ffffff',backgroundImage:'',notes:'private speaker notes',nodes:[],activity:{kind:'quiz',question:'ما عاصمة المغرب؟',options:['الرباط','طنجة'],correct:0,explanation:'الرباط هي العاصمة الإدارية للمغرب.'}},{id:'text',title:'رأي مفتوح',background:'#ffffff',backgroundImage:'',notes:'',nodes:[],activity:{kind:'text',question:'كيف تتحقق من الخبر؟',options:[],correct:0}}]};
+assert.equal((await api('/api/studio',{action:'save',deck})).status,200);
+const room=(await api('/api/studio',{action:'createRoom',deck:deck.id})).data.id;
+const after=await student('أضيف بعد فتح الحصة');
+assert.equal((await api('/api/reports?room='+room+'&teacher=1')).status,403);
+await api('/api/studio',{action:'roomControl',room,command:'timerRunning',value:true});
+const joined=await api('/api/studio',{action:'join',room,student:present,code:'Report-test-2026'},{});assert.equal(joined.status,200);const auth={Authorization:'Bearer '+joined.data.token};
+await api('/api/classroom',{action:'weights',room,weights:{quiz:6,text:4}});
+await api('/api/studio',{action:'roomControl',room,command:'answers_open',value:true});
+for(const value of ['1','0'])assert.equal((await api('/api/studio',{action:'answer',room,slide:'quiz',value},auth)).status,200);
+await api('/api/studio',{action:'roomControl',room,command:'position',value:1});await api('/api/studio',{action:'roomControl',room,command:'answers_open',value:true});
+await api('/api/studio',{action:'answer',room,slide:'text',value:'أعود إلى المصدر الأصلي وأقارن المعلومات.'},auth);await api('/api/studio',{action:'hand',room,raised:true},auth);
+await api('/api/classroom',{action:'grade',room,person:joined.data.id,slide:'text',points:3,feedback:'ملاحظة خاصة لا تظهر للطالب'});
+assert.equal((await api('/api/studio',{action:'roomControl',room,command:'active',value:false})).status,200);
+assert.equal((await api('/api/studio',{action:'answer',room,slide:'text',value:'late'},auth)).status,400);
+let report=await api('/api/reports?teacher=1&room='+room);assert.equal(report.status,200,JSON.stringify(report));assert.ok(report.data.ended);assert.equal(report.data.attended,1);assert.ok(report.data.entries.some(e=>e.id===absent&&e.status==='غائب'));assert.ok(!report.data.entries.some(e=>e.id===after));
+const entry=report.data.entries.find(e=>e.id===present);assert.equal(entry.score,9);assert.equal(entry.automaticPoints,6);assert.equal(entry.manualPoints,3);assert.equal(entry.hands,1);assert.equal(entry.details[0].history.length,2);assert.equal(entry.details[0].history[0].correct,false);assert.equal(entry.details[0].history[1].correct,true);assert.equal(entry.details[1].answer.answer,'أعود إلى المصدر الأصلي وأقارن المعلومات.');
+const own=await api('/api/reports?room='+room+'&student='+absent,null,auth);assert.equal(own.status,200);assert.equal(own.data.entries.length,1);assert.equal(own.data.entries[0].id,present);assert.equal(own.data.absent,undefined);assert.equal(own.data.entries[0].details[1].feedback,undefined);
+assert.equal((await api('/api/reports?room='+room,undefined,{})).status,401);assert.equal((await api('/api/reports',{room,student:absent,code:'wrong'},{})).status,401);
+const login=await api('/api/reports',{room,student:absent,code:'Report-test-2026'},{});assert.equal(login.status,200);const absentAuth={Authorization:'Bearer '+login.data.token};const absentReport=await api('/api/reports?room='+room,null,absentAuth);assert.equal(absentReport.data.entries[0].status,'غائب');assert.equal((await api('/api/reports?teacher=1&room='+room)).data.attended,1);
+await api('/api/classroom',{action:'saveStudent',id:absent,name:'طالب غائب محلي',year:1,code:'Reset-report-2026',profile:{}});assert.equal((await api('/api/reports?room='+room,null,absentAuth)).status,401);
+console.log('PASS reports: >30min boundary, absence, frozen roster, attempt history, scoring, closed answer rejection, private individual links, absent login without attendance, reset revocation.');
+console.log(JSON.stringify({room,present,absent}));
