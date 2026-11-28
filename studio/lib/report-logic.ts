@@ -1,3 +1,4 @@
+import {formatAnswer} from './form-answers';
 export function attendanceStatus(joined:number|null,start:number){
  if(joined===null)return {status:'غائب',lateMinutes:null,late:false};
  const minutes=Math.max(0,(joined-start)/60000);
@@ -5,7 +6,7 @@ export function attendanceStatus(joined:number|null,start:number){
 }
 export function answerDetail(slide:any,value:string){
  const a=slide.activity;
- return {value,answer:a?.kind==='text'?value:a?.options?.[Number(value)]??value,correct:a?.kind==='quiz'?String(a.correct)===value:null};
+ return {value,answer:a?.kind==='text'?formatAnswer(a,value):a?.options?.[Number(value)]??value,correct:a?.kind==='quiz'?String(a.correct)===value:null};
 }
 export function reportEntry(student:any,person:any,slides:any[],answers:any[],events:any[],grades:any[],visits:any[],config:any,start:number){
  const pa=answers.filter(a=>a.person===person?.id),pg=grades.filter(g=>g.person===person?.id),pv=visits.filter(v=>v.person===person?.id);
